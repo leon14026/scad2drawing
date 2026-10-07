@@ -21,6 +21,7 @@ out/
 *.pdf
 *.svg
 *.dxf
+!samples/drawingmaster/*.dxf
 *.png
 !docs/assets/*.png
 *.draftwright.json
