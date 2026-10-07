@@ -21,6 +21,8 @@ Want the GitHub repo private while this is WIP? That is optional hygiene, not re
 
 Open `notebooks/scad2drawing.ipynb` in Colab (upload the file if the GitHub repo is private). Run cells top to bottom. Rerun setup after a runtime reset.
 
+Using **Gemini in Colab** (side panel / “Help me code”): give it [GEMINI_COLAB_SOP.md](GEMINI_COLAB_SOP.md) and tell it to follow that file exactly. The SOP forbids `uvx` and kernel `import` of the CAD stacks — Gemini will otherwise invent a pip one-liner and hit `OCP TopTools ImportError`.
+
 Do **not** `uvx scad2step`. That unlocked resolve is what produced `OCP TopTools ImportError`. The notebook clones pins from `pins.toml` and runs `uv sync`.
 
 ## Local
