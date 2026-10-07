@@ -45,7 +45,7 @@ ASCII DXF only. Flags sheet, millimetres, third-angle (`asme-ca`), scale, genera
 
 ## Colab
 
-**V2 (use this):** [notebooks/scad2drawing_v2.ipynb](notebooks/scad2drawing_v2.ipynb) — CONFIG, Run all. SOP for Gemini: [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) (the notebook prints it after cloning the glue).
+**V2 (use this):** [notebooks/scad2drawing_v2.ipynb](notebooks/scad2drawing_v2.ipynb) — CONFIG, Run all. Gemini SOPs (each includes the same machine-readable `CAPABILITY_INDEX`): [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md), [GEMINI_COLAB_SOP.md](GEMINI_COLAB_SOP.md), [GEMINI_COLAB_SOP_DRAWINGMASTER.md](GEMINI_COLAB_SOP_DRAWINGMASTER.md). Canonical copy: [GEMINI_CAPACITY_INDEX.txt](GEMINI_CAPACITY_INDEX.txt). The notebook prints all of them after cloning the glue.
 
 [Open in Colab](https://colab.research.google.com/github/leon14026/scad2drawing/blob/cursor/v2-draw-worker-a0df/notebooks/scad2drawing_v2.ipynb) (public repo). Private: File → Upload the `.ipynb` **and** `GEMINI_COLAB_SOP_V2.md`, or upload a zip of this checkout. Tell Gemini: *Follow GEMINI_COLAB_SOP_V2.md exactly.*
 

@@ -2,6 +2,8 @@
 
 Separate checker. It reads an **ASCII DXF** and flags broken mechanical-drawing rules for a Canada shop profile. It does not look at the solid, and it does not approve a drawing.
 
+Colab / Gemini: [GEMINI_COLAB_SOP_DRAWINGMASTER.md](../GEMINI_COLAB_SOP_DRAWINGMASTER.md). The machine-readable command list is the `CAPABILITY_INDEX` block in that file (same text as [GEMINI_CAPACITY_INDEX.txt](../GEMINI_CAPACITY_INDEX.txt)).
+
 ```bash
 pip install -e .
 drawingmaster check samples/drawingmaster/metric_third_angle.dxf --profile asme-ca

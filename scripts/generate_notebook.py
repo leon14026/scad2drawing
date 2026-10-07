@@ -209,7 +209,7 @@ Copy this notebook. **Edit only the CONFIG cell.** Then run all.
 
 `.scad` → locked `scad2step` → `.step` → locked `draftwright` → PDF/SVG.
 
-Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright`. If Gemini is driving this notebook, follow `GEMINI_COLAB_SOP.md`.
+Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright`. If Gemini is driving this notebook, follow `GEMINI_COLAB_SOP.md`, including the `CAPABILITY_INDEX` block (full command inventory: convert, worker, drawingmaster).
 
 CPU runtime. After a reset, run from the setup cells again (CONFIG is kept).""",
     ),
@@ -456,7 +456,7 @@ Copy this notebook. **Edit only the CONFIG cell.** Then Runtime → Run all.
 
 `.scad` → locked `scad2step` → `.step` → V2 worker (`import draftwright` **inside** the draftwright env) → PDF/SVG.
 
-**Gemini:** follow `GEMINI_COLAB_SOP_V2.md` (this notebook prints it after cloning the glue). Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright` here.
+**Gemini:** follow `GEMINI_COLAB_SOP_V2.md` (this notebook prints every Gemini SOP, including the `CAPABILITY_INDEX` block). DXF checks: `GEMINI_COLAB_SOP_DRAWINGMASTER.md`. Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright` here.
 
 CPU runtime. After a reset, rerun from setup (CONFIG is kept).
 
@@ -548,15 +548,27 @@ print("glue", glue_root)""",
     ),
     cell(
         CODE,
-        r"""# Show V2 SOP in this notebook so Gemini / you can read it without leaving Colab
-sop = glue_root / "GEMINI_COLAB_SOP_V2.md"
-assert sop.is_file(), "GEMINI_COLAB_SOP_V2.md missing — upload it or clone the glue repo"
-print("SOP", sop)
+        r"""# Show every Gemini SOP (each contains the same CAPABILITY_INDEX block)
+names = (
+    "GEMINI_CAPACITY_INDEX.txt",
+    "GEMINI_COLAB_SOP_V2.md",
+    "GEMINI_COLAB_SOP.md",
+    "GEMINI_COLAB_SOP_DRAWINGMASTER.md",
+)
+missing = [n for n in names if not (glue_root / n).is_file()]
+assert not missing, "upload or clone these: " + ", ".join(missing)
 try:
     from IPython.display import Markdown, display
-    display(Markdown(sop.read_text()))
 except Exception:
-    print(sop.read_text())""",
+    display = None
+for name in names:
+    path = glue_root / name
+    print("SOP", path)
+    body = path.read_text()
+    if display:
+        display(Markdown("```text\n" + body + "\n```" if name.endswith(".txt") else body))
+    else:
+        print(body)""",
     ),
     cell(
         CODE,

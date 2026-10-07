@@ -1,0 +1,52 @@
+<<<CAPABILITY_INDEX schema=scad2drawing.capability_index schema_version=1>>>
+repo=leon14026/scad2drawing
+glue_pkg=scad2drawing glue_version=0.2.0
+checker_pkg=drawingmaster checker_version=0.1.0
+branch=cursor/v2-draw-worker-a0df
+sops=GEMINI_COLAB_SOP.md,GEMINI_COLAB_SOP_V2.md,GEMINI_COLAB_SOP_DRAWINGMASTER.md
+notebooks=notebooks/scad2drawing_template.ipynb,notebooks/scad2drawing.ipynb,notebooks/scad2drawing_v2.ipynb
+preferred=GEMINI_COLAB_SOP_V2.md + notebooks/scad2drawing_v2.ipynb
+colab_paths glue=/content/scad2drawing work=/content/work env_root=/content/envs scad_env=/content/envs/scad123d draw_env=/content/envs/draftwright
+pins scad123d=https://github.com/etjones/scad123d.git@85811a1a9daa291fb9ebfdfd8339322a9ec5b52c draftwright=https://github.com/pzfreo/draftwright.git@v0.4.35 bosl2=https://github.com/BelfrySCAD/BOSL2.git@master
+install_glue=python -m pip install -e /content/scad2drawing
+install_uv_only=python -m pip install uv
+install_openscad=apt-get install -y openscad
+bootstrap=scad2drawing bootstrap --root /content/envs
+env SCAD2DRAWING_ENV_ROOT SCAD2DRAWING_SCAD_ENV SCAD2DRAWING_DRAW_ENV SCAD123D_OPENSCAD
+forbidden=uvx;pip_install_scad123d;pip_install_draftwright;pip_install_build123d;pip_install_cadquery-ocp;kernel_import_scad123d;kernel_import_draftwright;kernel_import_build123d;mix_cad_venvs;nested_quotes_on_-D;vendor_engine_source;freecad;step2pdf;onshape_api;binary_dxf
+kernel_import_draftwright_allowed_only_as=uv run --directory DRAW_ENV python scripts/v2_draw_worker.py
+-D_form=name=value bare example part=frame reject part='"frame"'
+
+command scad2drawing.bootstrap argv="scad2drawing bootstrap --root DIR" effect=clone_pins_and_uv_sync
+command scad2drawing.convert argv="scad2drawing convert FILE.scad -o DIR" pipeline=".scad -> uv run scad2step -> .step -> draw -> pdf,svg"
+command scad2drawing.convert.draw default=worker choices=worker,cli worker=scripts/v2_draw_worker.py imports draftwright.build_drawing inside draw env only cli=official draftwright CLI no auto_dims
+command scad2drawing.convert.parts argv="--parts a,b" effect=loop -D part=NAME implies --keep-going title_sub={part} number_sub={part} default_number_sequence=DWG-001,DWG-002
+command scad2drawing.convert.on-mesh default=warn choices=warn,views-only,skip-draw,fail views-only=worker --no-auto-dims skip-draw=STEP plus MESH_FALLBACK.txt no drawing fail=exit 2
+command scad2drawing.convert.formats default=pdf,svg also=dxf,png,all
+command scad2drawing.convert.flags=-D --title --number --timeout --skip-step --skip-draw --keep-going --scad-env --draw-env --strict_not_a_convert_flag
+command scad2drawing.convert.lint reads={stem}.draftwright.json prints status,errors,warnings tally=needs-attention does_not_fail_process statuses=ok,mesh-warned,skipped-draw,needs-attention,failed mesh_stamp=scad2drawing.mesh_fallback
+command scad2drawing.convert.outputs={stem}.step {stem}.pdf {stem}.svg {stem}.dxf {stem}.png {stem}.draftwright.json {stem}.scad2step.log {stem}.MESH_FALLBACK.txt
+command scad2drawing.smoke argv="scad2drawing smoke" sample=samples/cube.scad draw=worker
+worker_script=scripts/v2_draw_worker.py args=--step --out --title --number --format --auto-dims/--no-auto-dims --mesh-fallback formats_all_order=pdf,svg,dxf,png
+
+command drawingmaster.check argv="drawingmaster check FILE.dxf --profile asme-ca|iso-ca [--json PATH] [--strict]" input=ASCII_DXF_only rejects=binary_DXF does_not_read_solid=true does_not_approve_part=true not_called_by_scad2drawing_convert=true
+drawingmaster.profile asme-ca default=true expects=millimetres,ISO_A0-A4,third_angle rejects_note=ISO_2768,ISO_8015,ISO_1101 error_if=first_angle
+drawingmaster.profile iso-ca expects=millimetres,ISO_A0-A4,first_or_third_stated rejects_note=ASME_Y14.5,Y14.5
+drawingmaster.canada_withdrawn=CAN3-B78.1,CAN/CSA-B78.2 do_not_implement
+drawingmaster.canada_practice=ASME_Y14.5_or_ISO_GPS plus millimetres third_angle_for_asme-ca
+drawingmaster.exit=1 if any error; 1 if --strict and any warning; else 0
+drawingmaster.error_rules=units_not_millimetres,inch_callout,projection_first_angle,gdt_datum_letter,gdt_datum_required,gdt_form_has_datum,gdt_missing_value
+drawingmaster.warning_rules=units_header_blank,units_not_stated,sheet_unknown,sheet_not_iso,sheet_size,scale_nonstandard,scale_missing,projection_missing,projection_both,title_number,title_revision,no_semantic_dimensions,untoleranced_dimension,lettering_small,standards_mixed
+drawingmaster.info_rules=scale_not_to_scale,gdt_symbol_unclassified
+drawingmaster.gdt_letters j=position policy=datum_required r=concentricity policy=datum_required n=diameter_modifier m=mmc l=lmc other_Fgdt_letters=unclassified_still_check_value_and_IOQ
+drawingmaster.gdt_unicode form_no_datum=straightness,flatness,cylindricity datum_required=angularity,perpendicularity,parallelism,position,concentricity,symmetry optional_datum=profile_line,profile_surface
+drawingmaster.illegal_datum_letters=I,O,Q
+drawingmaster.lettering_min_mm=2.5
+drawingmaster.sheets_mm=A4:210x297,A3:297x420,A2:420x594,A1:594x841,A0:841x1189 ansi_inch_sheets_flagged_sheet_not_iso
+drawingmaster.scales=1:1,1:2,1:5,1:10,1:20,1:50,1:100,1:200,1:500,1:1000,2:1,5:1,10:1,20:1,50:1,100:1 NTS=info
+drawingmaster.draftwright_dxf=exploded LINE/SPLINE/ARC no TEXT no DIMENSION expect warning no_semantic_dimensions do_not_invent_DIMENSION_entities use_.draftwright.json_for_pipeline_lint
+
+out_of_scope=onshape_mates,gear_relations,motion,balloons,BOM,shop_release_gdt_absent_from_scad,datum_scheme_correctness,tolerance_stack,missing_notch_or_D_flat_or_gear_module,mix_cad_stacks_one_colab_kernel,hosted_saas
+do_not_hide=mesh_fallback,needs-attention,drawingmaster_errors
+smoke_before_user_model=samples/cube.scad cube([10,20,30])
+<<<END_CAPABILITY_INDEX>>>

@@ -1,4 +1,4 @@
-include LICENSE NOTICE LEGAL.md pins.toml README.md GEMINI_COLAB_SOP.md GEMINI_COLAB_SOP_V2.md
+include LICENSE NOTICE LEGAL.md pins.toml README.md GEMINI_CAPACITY_INDEX.txt GEMINI_COLAB_SOP.md GEMINI_COLAB_SOP_V2.md GEMINI_COLAB_SOP_DRAWINGMASTER.md
 recursive-include docs *.pptx *.png *.md
 recursive-include samples *.scad *.dxf
 recursive-include notebooks *.ipynb
