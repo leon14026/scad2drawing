@@ -34,11 +34,13 @@ scad2drawing convert samples/cube.scad -o out --draw cli   # V1 CLI
 
 ## Colab
 
-Open `notebooks/scad2drawing_template.ipynb` in Colab (File → Upload if the GitHub repo is private). Edit **CONFIG** (`MODEL_NAME`, `PARTS`, `NEED_BOSL2`), then Runtime → Run all. Rerun setup after a runtime reset.
+**V2 (use this):** [notebooks/scad2drawing_v2.ipynb](notebooks/scad2drawing_v2.ipynb) — CONFIG, Run all. SOP for Gemini: [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) (the notebook prints it after cloning the glue).
 
-Using **Gemini in Colab** (side panel / “Help me code”): give it [GEMINI_COLAB_SOP.md](GEMINI_COLAB_SOP.md) and tell it to follow that file exactly. The SOP forbids `uvx` and kernel `import` of the CAD stacks — Gemini will otherwise invent a pip one-liner and hit `OCP TopTools ImportError`.
+[Open in Colab](https://colab.research.google.com/github/leon14026/scad2drawing/blob/cursor/v2-draw-worker-a0df/notebooks/scad2drawing_v2.ipynb) (public repo). Private: File → Upload the `.ipynb` **and** `GEMINI_COLAB_SOP_V2.md`, or upload a zip of this checkout. Tell Gemini: *Follow GEMINI_COLAB_SOP_V2.md exactly.*
 
-Do **not** `uvx scad2step`. That unlocked resolve is what produced `OCP TopTools ImportError`. The notebook clones pins from `pins.toml` and runs `uv sync`.
+V1 template (raw `draftwright` CLI cells): [notebooks/scad2drawing_template.ipynb](notebooks/scad2drawing_template.ipynb) + [GEMINI_COLAB_SOP.md](GEMINI_COLAB_SOP.md).
+
+Do **not** `uvx scad2step`. That unlocked resolve is what produced `OCP TopTools ImportError`. The notebook clones pins from `pins.toml` and runs `uv sync` via `scad2drawing bootstrap`.
 
 ## Local
 

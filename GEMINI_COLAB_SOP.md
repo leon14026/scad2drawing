@@ -11,6 +11,8 @@ Use this file as the **instruction pack** if you drive the conversion with Gemin
 
 Preferred path: open `notebooks/scad2drawing_template.ipynb`, fill the **CONFIG** cell, and only ask Gemini to **fill CONFIG and run cells**, not to rewrite setup.
 
+**V2:** use [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) and `notebooks/scad2drawing_v2.ipynb` instead of this file.
+
 ---
 
 ## Paste into Gemini (system)
@@ -270,11 +272,10 @@ colab_files.download(str(bundle))
 
 ## V2 addendum
 
-`scad2drawing convert` defaults to `--draw worker` (V2). Allowed:
+Superseded by [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) and `notebooks/scad2drawing_v2.ipynb`. If you stay on this V1 file by mistake, still allowed:
 
 ```text
 scad2drawing convert /content/work/MODEL.scad -o /content/work/out --parts frame,shaft --title "{part}"
-scad2drawing convert /content/work/MODEL.scad -o /content/work/out --on-mesh views-only
 ```
 
-Still forbidden: `import draftwright` (or scad123d / build123d) in a notebook cell. The worker is `uv run --directory DRAW_ENV python …/v2_draw_worker.py`, not a kernel import. `--draw cli` is the V1 CLI if you want that path.
+Still forbidden: `import draftwright` in a notebook cell.
