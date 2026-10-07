@@ -1,0 +1,4 @@
+include LICENSE NOTICE LEGAL.md pins.toml README.md
+recursive-include samples *.scad
+recursive-include notebooks *.ipynb
+recursive-include envs README.md

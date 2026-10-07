@@ -1,20 +1,46 @@
 # scad2drawing
 
-Glue an OpenSCAD `.scad` file into a dimensioned engineering drawing, intended to run in Google Colab.
-
-This is **not** a fork-merge of two CAD codebases. The working design is:
+Glue an OpenSCAD `.scad` file into a STEP file and a dimensioned drawing. Built to run in **Google Colab** the same way the existing conversion SOP does: locked `uv` environments, subprocess CLIs, STEP on disk.
 
 ```
-.scad  →  scad2step / scad123d  →  .step  →  draftwright  →  PDF / SVG / DXF
+.scad  →  uv run scad2step  →  .step  →  uv run draftwright  →  PDF / SVG
 ```
 
-**Feasibility: yes**, with isolated Python environments (the two PyPI stacks pin incompatible `build123d` versions on Colab's Python 3.12). Do not use `uvx`; clone each tool and `uv sync` its lockfile — an unlocked resolve already failed in Colab as `OCP TopTools ImportError`. Details are in [FEASIBILITY.md](FEASIBILITY.md).
+This repository is **original MIT glue**. It does not vendor [scad123d](https://github.com/etjones/scad123d) or [draftwright](https://github.com/pzfreo/draftwright). You clone those projects at pinned revisions and run **their** lockfiles. See [NOTICE](NOTICE) and [LEGAL.md](LEGAL.md).
 
-This would replace the *manual Onshape drawing* step for single parts. Onshape remains the place for mates, motion, and assembly drawings.
+Want the GitHub repo private while this is WIP? That is optional hygiene, not required for license compliance. Settings → Change visibility. This repo cannot flip that for you.
 
-| Stage | Project | License |
-|---|---|---|
-| SCAD → STEP | [etjones/scad2step](https://github.com/etjones/scad2step) / [scad123d](https://github.com/etjones/scad123d) | MIT |
-| STEP → drawing | [pzfreo/draftwright](https://github.com/pzfreo/draftwright) | AGPL-3.0 |
+## V1
 
-Nothing here is implemented yet. Next step is a Colab notebook that installs OpenSCAD, runs the two CLIs in separate envs, and lets you download the PDF.
+- Colab notebook: [notebooks/scad2drawing.ipynb](notebooks/scad2drawing.ipynb)
+- Local CLI: `scad2drawing bootstrap` then `scad2drawing convert file.scad -D part=frame`
+- Samples under `samples/` (cube smoke, plate, `part=` selector, known mesh-fallback hull)
+- **Not** Onshape mates, assembly balloons, or `import draftwright` in the notebook kernel
+
+## Colab
+
+Open `notebooks/scad2drawing.ipynb` in Colab (upload the file if the GitHub repo is private). Run cells top to bottom. Rerun setup after a runtime reset.
+
+Do **not** `uvx scad2step`. That unlocked resolve is what produced `OCP TopTools ImportError`. The notebook clones pins from `pins.toml` and runs `uv sync`.
+
+## Local
+
+```bash
+# system: git, uv, OpenSCAD on PATH
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+scad2drawing bootstrap --root envs
+scad2drawing smoke --skip-draw          # needs OpenSCAD + scad123d env
+scad2drawing convert samples/plate.scad -o out --title "Plate"
+scad2drawing convert samples/selector.scad -o out -D part=frame --title Frame
+```
+
+Environment variables: `SCAD2DRAWING_SCAD_ENV`, `SCAD2DRAWING_DRAW_ENV`, `SCAD123D_OPENSCAD`.
+
+## License
+
+- This repo: MIT
+- Drawing engine you install: draftwright **AGPL-3.0** (official CLI only in V1)
+- Converter you install: scad123d **MIT**

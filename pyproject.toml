@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scad2drawing"
+version = "0.1.0"
+description = "Glue: OpenSCAD .scad → STEP (scad123d) → drawing (draftwright) via locked CLI envs"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "scad2drawing contributors" }]
+keywords = ["openscad", "step", "engineering-drawing", "colab"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+scad2drawing = "scad2drawing.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/leon14026/scad2drawing"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
