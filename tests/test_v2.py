@@ -27,9 +27,10 @@ def _load_worker():
 def test_package_never_imports_draftwright():
     src = Path(__file__).resolve().parents[1] / "src" / "scad2drawing"
     for path in src.glob("*.py"):
-        text = path.read_text()
-        assert "import draftwright" not in text
-        assert "from draftwright" not in text
+        for i, line in enumerate(path.read_text().splitlines(), start=1):
+            stripped = line.strip()
+            assert not stripped.startswith("import draftwright"), f"{path}:{i}"
+            assert not stripped.startswith("from draftwright"), f"{path}:{i}"
 
 
 def test_worker_parse_formats():

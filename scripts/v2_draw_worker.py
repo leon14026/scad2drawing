@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 def parse_formats(value: str) -> tuple[str, ...]:
-    allowed = {"pdf", "svg", "dxf", "png"}
+    allowed = ("pdf", "svg", "dxf", "png")
     out: list[str] = []
     for raw in value.split(","):
         tok = raw.strip().lower()
