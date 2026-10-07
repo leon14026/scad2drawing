@@ -12,14 +12,15 @@ Want the GitHub repo private while this is WIP? That is optional hygiene, not re
 
 ## V1
 
-- Colab notebook: [notebooks/scad2drawing.ipynb](notebooks/scad2drawing.ipynb)
+- Colab **template** (V1.2): [notebooks/scad2drawing_template.ipynb](notebooks/scad2drawing_template.ipynb) — copy it, edit the CONFIG cell, Run all
+- Walkthrough notebook: [notebooks/scad2drawing.ipynb](notebooks/scad2drawing.ipynb)
 - Local CLI: `scad2drawing bootstrap` then `scad2drawing convert file.scad -D part=frame`
 - Samples under `samples/` (cube smoke, plate, `part=` selector, known mesh-fallback hull)
 - **Not** Onshape mates, assembly balloons, or `import draftwright` in the notebook kernel
 
 ## Colab
 
-Open `notebooks/scad2drawing.ipynb` in Colab (upload the file if the GitHub repo is private). Run cells top to bottom. Rerun setup after a runtime reset.
+Open `notebooks/scad2drawing_template.ipynb` in Colab (File → Upload if the GitHub repo is private). Edit **CONFIG** (`MODEL_NAME`, `PARTS`, `NEED_BOSL2`), then Runtime → Run all. Rerun setup after a runtime reset.
 
 Using **Gemini in Colab** (side panel / “Help me code”): give it [GEMINI_COLAB_SOP.md](GEMINI_COLAB_SOP.md) and tell it to follow that file exactly. The SOP forbids `uvx` and kernel `import` of the CAD stacks — Gemini will otherwise invent a pip one-liner and hit `OCP TopTools ImportError`.
 

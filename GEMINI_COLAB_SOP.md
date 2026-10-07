@@ -9,7 +9,7 @@ Use this file as the **instruction pack** if you drive the conversion with Gemin
 3. Tell Gemini: *Follow GEMINI_COLAB_SOP.md exactly. Do not invent a shorter install.*
 4. After a runtime reset, start again at Cell 1.
 
-Preferred path: open `notebooks/scad2drawing.ipynb` from this repo and only ask Gemini to **fill placeholders and run cells**, not to rewrite setup.
+Preferred path: open `notebooks/scad2drawing_template.ipynb`, fill the **CONFIG** cell, and only ask Gemini to **fill CONFIG and run cells**, not to rewrite setup.
 
 ---
 
