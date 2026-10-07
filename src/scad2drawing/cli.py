@@ -24,6 +24,7 @@ from scad2drawing.commands import (
     parse_parts,
     scad2step_cmd,
     scad_env_dir,
+    summarize_drawing_report,
     uv_sync_cmd,
     worker_script,
 )
@@ -188,6 +189,24 @@ def convert_one(
             raise SystemExit(proc.returncode)
         return "failed"
     print(f"scad2drawing: drawing prefix {prefix}")
+    report = summarize_drawing_report(Path(str(prefix) + ".draftwright.json"))
+    if report:
+        print(
+            f"scad2drawing: lint {stem} status={report['status']} "
+            f"errors={report['errors']} warnings={report['warnings']}",
+            file=sys.stderr,
+        )
+        if report["attention"]:
+            if report["summary"]:
+                print(f"  {report['summary']}", file=sys.stderr)
+            for sev, code, msg in report["issues"][:5]:
+                clip = msg if len(msg) <= 140 else msg[:137] + "..."
+                print(f"  [{sev}] {code}: {clip}", file=sys.stderr)
+            extra = len(report["issues"]) - 5
+            if extra > 0:
+                print(f"  … {extra} more error/warning issue(s)", file=sys.stderr)
+    if report and report["attention"]:
+        return "needs-attention"
     return "mesh-warned" if hits else "ok"
 
 
@@ -252,7 +271,11 @@ def cmd_convert(args: argparse.Namespace) -> None:
         )
 
     failed = sum(1 for s in statuses if s == "failed")
-    print(f"scad2drawing: done {len(statuses)} job(s), {failed} failed ({', '.join(statuses)})")
+    attention = sum(1 for s in statuses if s == "needs-attention")
+    print(
+        f"scad2drawing: done {len(statuses)} job(s), {failed} failed, "
+        f"{attention} needs-attention ({', '.join(statuses)})"
+    )
     if failed:
         raise SystemExit(1)
 

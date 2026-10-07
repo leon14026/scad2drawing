@@ -30,7 +30,7 @@ scad2drawing convert samples/hull_fallback.scad -o out --on-mesh views-only
 scad2drawing convert samples/cube.scad -o out --draw cli   # V1 CLI
 ```
 
-`--on-mesh warn|views-only|skip-draw|fail`. Details: [docs/V2.md](docs/V2.md).
+`--on-mesh warn|views-only|skip-draw|fail`. After each drawing the CLI prints draftwright’s JSON lint (`needs-attention` vs `bounded-clear`). Default outputs are PDF **and** SVG. Details: [docs/V2.md](docs/V2.md).
 
 ## Colab
 

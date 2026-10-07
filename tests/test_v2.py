@@ -198,6 +198,47 @@ def test_convert_one_views_only_passes_no_auto_dims(tmp_path, monkeypatch):
     )
 
 
+def test_convert_one_flags_lint_needs_attention(tmp_path, monkeypatch):
+    scad = tmp_path / "wheel.scad"
+    scad.write_text("cylinder(d=40, h=5);\n")
+    out = tmp_path / "out"
+    out.mkdir()
+    scad_env, draw_env = _envs(tmp_path)
+
+    def fake_run(cmd, *, log=None, check=True):
+        if "scad2step" in cmd:
+            Path(cmd[cmd.index("-o") + 1]).write_text("ISO-10303-21;")
+            proc = SimpleNamespace(returncode=0, stdout="", stderr="")
+            if log is not None:
+                log.write_text("")
+            return proc
+        out.joinpath("wheel.draftwright.json").write_text(
+            '{"status":"needs-attention","lint":{"errors":1,"warnings":0,'
+            '"assessment":{"status":"needs-attention","summary":"incomplete"},'
+            '"issues":[{"severity":"error","code":"overall_dim_withheld","message":"width"}]}}'
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(cli, "_run", fake_run)
+    status = cli.convert_one(
+        scad=scad,
+        out_dir=out,
+        defines=[],
+        title="Wheel",
+        number="DWG-001",
+        formats="pdf,svg",
+        timeout=30,
+        skip_step=False,
+        skip_draw=False,
+        scad_env=scad_env,
+        draw_env=draw_env,
+        on_mesh="warn",
+        draw="worker",
+        check=True,
+    )
+    assert status == "needs-attention"
+
+
 def test_cmd_convert_loops_parts(tmp_path, monkeypatch):
     scad = tmp_path / "selector.scad"
     scad.write_text("cube(1);\n")

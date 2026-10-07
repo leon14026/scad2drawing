@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -190,6 +191,47 @@ def mesh_fallback_lines(stderr: str) -> list[str]:
         if any(h.lower() in line.lower() for h in MESH_HINTS):
             hits.append(line.strip())
     return hits
+
+
+def summarize_drawing_report(path: Path) -> dict | None:
+    """Read a draftwright JSON sidecar. No CAD imports.
+
+    Returns None if the file is missing or not JSON. ``attention`` is true when
+    the report status is ``needs-attention`` (same string draftwright uses).
+    """
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    lint = data.get("lint") if isinstance(data.get("lint"), dict) else {}
+    assessment = lint.get("assessment") if isinstance(lint.get("assessment"), dict) else {}
+    status = str(data.get("status") or assessment.get("status") or "").strip()
+    errors = int(lint.get("errors") or 0)
+    warnings = int(lint.get("warnings") or 0)
+    issues: list[tuple[str, str, str]] = []
+    raw_issues = lint.get("issues") if isinstance(lint.get("issues"), list) else []
+    for issue in raw_issues:
+        if not isinstance(issue, dict):
+            continue
+        sev = str(issue.get("severity") or "")
+        if sev not in {"error", "warning"}:
+            continue
+        issues.append(
+            (sev, str(issue.get("code") or ""), str(issue.get("message") or ""))
+        )
+    attention = status == "needs-attention"
+    return {
+        "status": status or "unknown",
+        "errors": errors,
+        "warnings": warnings,
+        "summary": str(assessment.get("summary") or ""),
+        "attention": attention,
+        "issues": issues,
+    }
 
 
 def default_env_root() -> Path:

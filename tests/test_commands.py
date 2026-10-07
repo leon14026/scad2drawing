@@ -10,6 +10,7 @@ from scad2drawing.commands import (
     git_clone_cmd,
     mesh_fallback_lines,
     output_stem,
+    summarize_drawing_report,
     parse_defines,
     parse_parts,
     part_from_defines,
@@ -122,3 +123,42 @@ def test_draw_worker_argv_stays_in_draw_env():
     assert "--title" in cmd and "Frame" in cmd
     assert worker_script().is_file()
     assert worker_script().name == "v2_draw_worker.py"
+
+
+def test_summarize_drawing_report_flags_needs_attention(tmp_path):
+    path = tmp_path / "part.draftwright.json"
+    path.write_text(
+        """{
+          "status": "needs-attention",
+          "lint": {
+            "errors": 1,
+            "warnings": 2,
+            "passed": false,
+            "assessment": {"status": "needs-attention", "summary": "lint lint_failed"},
+            "issues": [
+              {"severity": "error", "code": "overall_dim_withheld", "message": "width not placed"},
+              {"severity": "warning", "code": "angular_dimension_dropped", "message": "167.6"},
+              {"severity": "info", "code": "nominal_rounded", "message": "ignore me"}
+            ]
+          }
+        }
+        """
+    )
+    report = summarize_drawing_report(path)
+    assert report is not None
+    assert report["attention"] is True
+    assert report["status"] == "needs-attention"
+    assert report["errors"] == 1
+    assert report["warnings"] == 2
+    assert [c for _, c, _ in report["issues"]] == [
+        "overall_dim_withheld",
+        "angular_dimension_dropped",
+    ]
+
+
+def test_summarize_drawing_report_clear_and_missing(tmp_path):
+    clear = tmp_path / "cube.draftwright.json"
+    clear.write_text('{"status": "bounded-clear", "lint": {"errors": 0, "warnings": 0, "issues": []}}')
+    report = summarize_drawing_report(clear)
+    assert report is not None and report["attention"] is False
+    assert summarize_drawing_report(tmp_path / "nope.json") is None
