@@ -22,6 +22,7 @@ out/
 *.svg
 *.dxf
 *.png
+!docs/assets/*.png
 *.draftwright.json
 *.scad2step.log
 

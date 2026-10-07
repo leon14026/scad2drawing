@@ -42,6 +42,14 @@ scad2drawing convert samples/selector.scad -o out -D part=frame --title Frame
 
 Environment variables: `SCAD2DRAWING_SCAD_ENV`, `SCAD2DRAWING_DRAW_ENV`, `SCAD123D_OPENSCAD`.
 
+## Supervisor briefing
+
+A 15-slide deck that explains V1 from scratch (what OpenSCAD, STEP, scad123d, draftwright, Colab, and this repo each are):
+
+[docs/scad2drawing_v1_supervisor.pptx](docs/scad2drawing_v1_supervisor.pptx)
+
+Regenerate with `python3 scripts/build_supervisor_pptx.py` (needs `python-pptx`).
+
 ## License
 
 - This repo: MIT
