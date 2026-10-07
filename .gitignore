@@ -25,6 +25,7 @@ out/
 !docs/assets/*.png
 *.draftwright.json
 *.scad2step.log
+*.MESH_FALLBACK.txt
 
 # Local notebooks / Colab
 .ipynb_checkpoints/

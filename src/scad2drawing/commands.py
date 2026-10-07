@@ -121,6 +121,69 @@ def uv_sync_cmd(env: Path) -> list[str]:
     return ["uv", "sync", "--directory", str(env)]
 
 
+def parse_parts(raw: str | None) -> list[str]:
+    """Comma-separated ``--parts frame,shaft`` list. Empty → []."""
+    if not raw:
+        return []
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if any("=" in p or " " in p for p in parts):
+        raise DefineError(f"--parts expects comma-separated names, got {raw!r}")
+    return parts
+
+
+def defines_for_part(base: list[str], part: str | None) -> list[str]:
+    """Replace or add ``part=`` while keeping other -D flags."""
+    rest = [d for d in base if not d.startswith("part=")]
+    if part:
+        rest.append(f"part={part}")
+    return rest
+
+
+def draw_worker_cmd(
+    env: Path,
+    worker: Path,
+    step: Path,
+    out_prefix: Path,
+    *,
+    title: str | None = None,
+    number: str = "DWG-001",
+    formats: str = "pdf,svg",
+    auto_dims: bool = True,
+    mesh_fallback: bool = False,
+) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "--directory",
+        str(env),
+        "python",
+        str(worker),
+        "--step",
+        str(step),
+        "--out",
+        str(out_prefix),
+        "--format",
+        formats,
+        "--number",
+        number,
+    ]
+    if title:
+        cmd.extend(["--title", title])
+    if auto_dims:
+        cmd.append("--auto-dims")
+    else:
+        cmd.append("--no-auto-dims")
+    if mesh_fallback:
+        cmd.append("--mesh-fallback")
+    return cmd
+
+
+def worker_script() -> Path:
+    from scad2drawing.pins import ROOT
+
+    return ROOT / "scripts" / "v2_draw_worker.py"
+
+
 def mesh_fallback_lines(stderr: str) -> list[str]:
     hits = []
     for line in stderr.splitlines():

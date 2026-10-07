@@ -4,14 +4,18 @@ import pytest
 
 from scad2drawing.commands import (
     DefineError,
+    defines_for_part,
     draftwright_cmd,
+    draw_worker_cmd,
     git_clone_cmd,
     mesh_fallback_lines,
     output_stem,
     parse_defines,
+    parse_parts,
     part_from_defines,
     scad2step_cmd,
     uv_sync_cmd,
+    worker_script,
 )
 from scad2drawing.pins import DRAFTWRIGHT, SCAD123D
 
@@ -75,3 +79,46 @@ def test_mesh_fallback_detection():
     log = "note: hull() has no BRep equivalent, using mesh fallback\nOK\n"
     hits = mesh_fallback_lines(log)
     assert hits and "mesh fallback" in hits[0].lower()
+
+
+def test_parse_parts_split_and_reject():
+    assert parse_parts(None) == []
+    assert parse_parts("") == []
+    assert parse_parts("frame,shaft") == ["frame", "shaft"]
+    assert parse_parts(" frame , shaft , ") == ["frame", "shaft"]
+    with pytest.raises(DefineError):
+        parse_parts("frame shaft")
+    with pytest.raises(DefineError):
+        parse_parts("part=frame")
+
+
+def test_defines_for_part_replaces_selector():
+    assert defines_for_part(["holes=6"], "frame") == ["holes=6", "part=frame"]
+    assert defines_for_part(["part=assembly", "holes=6"], "shaft") == [
+        "holes=6",
+        "part=shaft",
+    ]
+    assert defines_for_part(["part=frame"], None) == []
+
+
+def test_draw_worker_argv_stays_in_draw_env():
+    env = Path("/content/draftwright")
+    worker = Path("/repo/scripts/v2_draw_worker.py")
+    cmd = draw_worker_cmd(
+        env,
+        worker,
+        Path("/tmp/part.step"),
+        Path("/tmp/part"),
+        title="Frame",
+        formats="pdf,svg",
+        auto_dims=False,
+        mesh_fallback=True,
+    )
+    assert cmd[:4] == ["uv", "run", "--directory", "/content/draftwright"]
+    assert cmd[4:6] == ["python", str(worker)]
+    assert "uvx" not in cmd
+    assert "--no-auto-dims" in cmd
+    assert "--mesh-fallback" in cmd
+    assert "--title" in cmd and "Frame" in cmd
+    assert worker_script().is_file()
+    assert worker_script().name == "v2_draw_worker.py"
