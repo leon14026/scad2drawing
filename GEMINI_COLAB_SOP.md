@@ -59,7 +59,7 @@ Onshape mates/motion are out of scope. One STEP → one drawing. Use -D part=NAM
 | Smoke cube first | Jump straight to a huge assembly |
 | Export components separately for motion/drawings | Draw a fused `union()` assembly as if it were one part |
 
-draftwright is AGPL-3.0. Call the official CLI only. Do not paste its source into the notebook.
+draftwright is AGPL-3.0. Call it via `scad2drawing convert` or `uv run --directory DRAW_ENV …`. Do not paste its source into the notebook. Do not `import draftwright` in the Colab kernel. V2’s worker import is allowed **only** as that subprocess (`--draw worker`, the CLI default).
 
 ---
 
@@ -242,7 +242,7 @@ colab_files.download(str(bundle))
 | Cube works, real model fails | Geometry/library issue, not env. Export one module via `-D part=`. |
 | `hull() has no BRep equivalent` | Expected mesh fallback. Warn the user; still write STEP. |
 | One fused body | Expected for `part=assembly`. Draw `frame` / `shaft` separately. |
-| User asks to `import draftwright` | Refuse for V1. Call the CLI in `DRAW_ENV`. |
+| User asks to `import draftwright` in the kernel | Refuse. Use `scad2drawing convert` (`--draw worker` runs the import inside `DRAW_ENV` only). |
 
 ---
 
@@ -265,3 +265,16 @@ colab_files.download(str(bundle))
 - [ ] Mesh-fallback notes copied to the user if present
 - [ ] PDF/SVG downloaded
 - [ ] No `uvx`, no kernel `import draftwright`
+
+---
+
+## V2 addendum
+
+`scad2drawing convert` defaults to `--draw worker` (V2). Allowed:
+
+```text
+scad2drawing convert /content/work/MODEL.scad -o /content/work/out --parts frame,shaft --title "{part}"
+scad2drawing convert /content/work/MODEL.scad -o /content/work/out --on-mesh views-only
+```
+
+Still forbidden: `import draftwright` (or scad123d / build123d) in a notebook cell. The worker is `uv run --directory DRAW_ENV python …/v2_draw_worker.py`, not a kernel import. `--draw cli` is the V1 CLI if you want that path.
