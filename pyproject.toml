@@ -18,6 +18,7 @@ dev = ["pytest>=8"]
 
 [project.scripts]
 scad2drawing = "scad2drawing.cli:main"
+drawingmaster = "drawingmaster.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/leon14026/scad2drawing"

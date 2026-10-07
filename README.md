@@ -32,6 +32,17 @@ scad2drawing convert samples/cube.scad -o out --draw cli   # V1 CLI
 
 `--on-mesh warn|views-only|skip-draw|fail`. After each drawing the CLI prints draftwright’s JSON lint (`needs-attention` vs `bounded-clear`). Default outputs are PDF **and** SVG. Details: [docs/V2.md](docs/V2.md).
 
+## Drawing checker
+
+Separate module, separate command. It does not run inside `scad2drawing convert`.
+
+```bash
+drawingmaster check samples/drawingmaster/metric_third_angle.dxf --profile asme-ca
+drawingmaster check part.dxf --profile iso-ca --json out/part.flags.json
+```
+
+ASCII DXF only. Flags sheet, millimetres, third-angle (`asme-ca`), scale, general tolerance, and feature-control-frame syntax. It does not approve the part. Details: [docs/DRAWINGMASTER.md](docs/DRAWINGMASTER.md).
+
 ## Colab
 
 **V2 (use this):** [notebooks/scad2drawing_v2.ipynb](notebooks/scad2drawing_v2.ipynb) — CONFIG, Run all. SOP for Gemini: [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) (the notebook prints it after cloning the glue).
