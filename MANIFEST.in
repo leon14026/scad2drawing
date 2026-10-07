@@ -1,0 +1,5 @@
+include LICENSE NOTICE LEGAL.md pins.toml README.md GEMINI_COLAB_SOP.md
+recursive-include docs *.pptx *.png
+recursive-include samples *.scad
+recursive-include notebooks *.ipynb
+recursive-include envs README.md

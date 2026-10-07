@@ -1,0 +1,16 @@
+# Upstream pins for V1. Bootstrap clones these revisions and runs `uv sync`
+# against *their* lockfiles. Do not `uvx` / unlocked pip for CAD wheels.
+
+[scad123d]
+repo = "https://github.com/etjones/scad123d.git"
+# main @ 2026-10-07; PyPI 0.8.0 has no matching git tag
+rev = "85811a1a9daa291fb9ebfdfd8339322a9ec5b52c"
+
+[draftwright]
+repo = "https://github.com/pzfreo/draftwright.git"
+rev = "v0.4.35"
+
+[bosl2]
+repo = "https://github.com/BelfrySCAD/BOSL2.git"
+rev = "master"
+openscad_libraries_subdir = "BOSL2"

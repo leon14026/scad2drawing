@@ -1,0 +1,41 @@
+scad2drawing
+Copyright (c) 2026 the scad2drawing contributors
+License: MIT (see LICENSE)
+
+This repository is glue. It does not vendor CAD engine source. At runtime it
+clones or installs third-party tools into isolated environments and runs their
+published command-line interfaces.
+
+Third-party software the user installs (not shipped as source in this tree)
+===========================================================================
+
+scad123d / scad2step
+  https://github.com/etjones/scad123d
+  https://github.com/etjones/scad2step
+  License: MIT
+  Used as: `uv run scad2step`
+
+draftwright
+  https://github.com/pzfreo/draftwright
+  License: GNU Affero General Public License v3.0
+  Used as: `uv run draftwright`
+  The drawing engine is AGPL-3.0. This wrapper calls the official CLI; it does
+  not copy, modify, or relicense draftwright. If you modify draftwright or
+  expose a modified copy as a network service, AGPL obligations are yours.
+
+build123d
+  https://github.com/gumyr/build123d
+  License: Apache-2.0
+  Transitive dependency of the two environments above.
+
+OpenSCAD
+  https://openscad.org
+  License: GPL-2.0-or-later
+  Installed as a system binary (apt, AppImage, etc.). Not linked.
+
+BOSL2 (optional, only if a model `include`s it)
+  https://github.com/BelfrySCAD/BOSL2
+  License: BSD-2-Clause
+  Cloned into the OpenSCAD libraries directory; not imported as Python.
+
+Do not copy maowiz/step2pdf code into this project (no published license).

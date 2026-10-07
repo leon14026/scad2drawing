@@ -1,0 +1,31 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Isolated CAD clones (bootstrap). Never commit upstream source.
+envs/scad123d/
+envs/draftwright/
+envs/.cache/
+
+# Conversion outputs
+out/
+*.step
+*.stp
+*.pdf
+*.svg
+*.dxf
+*.png
+!docs/assets/*.png
+*.draftwright.json
+*.scad2step.log
+
+# Local notebooks / Colab
+.ipynb_checkpoints/
+content/
