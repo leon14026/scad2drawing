@@ -114,6 +114,38 @@ OpenCASCADE wheels (`cadquery-ocp` / `cadquery-ocp-novtk`) are large. First-cell
 
 ---
 
+## Lessons from the existing Colab SOP
+
+The user already has a working *OpenSCAD → STEP → Onshape* notebook SOP. That is production evidence, not theory. It changes several earlier assumptions.
+
+**1. `uvx scad2step` is the bug, not the install.** The public scad2step README's one-liner lets uv resolve a fresh, unlocked `build123d`/`cadquery-ocp` set. On Colab that failed as `OCP TopTools ImportError`. The fix that actually works:
+
+```text
+git clone etjones/scad123d → uv sync (lockfile) → uv run scad2step
+```
+
+Any notebook we ship must copy that pattern. A second lockfile (or `uv sync` of a draftwright clone) is required for the drawing hop. Mixing both into Colab's system `pip` is the same class of failure.
+
+**2. This repo replaces SOP section 13 for parts, not the whole SOP.** Today drawings are made by hand in Onshape after STEP import (views, dimensions, title block, PDF). Mates, motion, gear relations, and assembly balloons stay in Onshape — STEP does not carry parameters or mechanisms. Auto-drawings from draftwright are a Colab replacement for *single-part* sheets. They are not a replacement for Onshape assemblies.
+
+**3. `-D part=` is a first-class input.** Real models expose a selector (`part=frame|shaft|assembly|...`) and export components separately. A fused assembly STEP is for visualization / a static picture, not for motion or per-part documentation. The wrapper should loop that selector, not assume one `.scad` → one drawing.
+
+**4. Operational details to encode, not rediscover.**
+
+| SOP fact | Implication |
+|---|---|
+| Colab VMs are disposable | Setup cells rerun after reset; pin SHAs / lockfiles in this repo |
+| `%cd /content/scad123d` then `files.upload()` | Files land in the clone. Keep a `/content/work` dir and use absolute paths |
+| BOSL2 at `/root/.local/share/OpenSCAD/libraries/BOSL2` | That is the OpenSCAD library path on Colab; clone only what the model `include`s |
+| Smoke `cube([10,20,30])` before the real file | Separates env breakage from geometry breakage |
+| Nested `offset_2d` / `hull()` mesh fallback | Surface converter warnings; inspect those faces before trusting dims |
+| `-D part=NAME` quoting | Nested quotes break OpenSCAD; pass the selector bare |
+| Full assembly much slower than a part | Timeouts and RAM; export components first |
+
+**5. Colors survive into STEP.** The SOP keeps appearances on for Onshape identification. scad123d already preserves `color()` as named bodies. Useful for inspection; draftwright still wants one solid per drawing.
+
+---
+
 ## Colab install sketch (not yet implemented)
 
 OpenSCAD CSG/STL export does **not** need a display. PNG preview does (Xvfb). For conversion only:
@@ -125,16 +157,47 @@ apt-get install -y openscad   # Ubuntu jammy: 2021.01 from universe
 
 `openscad -o model.csg model.scad` is what scad123d needs. If a model requires a newer OpenSCAD language/library, download an official AppImage instead of the distro package.
 
+Do **not** follow the public `uvx scad2step` one-liner in Colab. That unlocked resolver is what produced the `OCP TopTools ImportError` in the existing SOP. Use the cloned repo lockfile:
+
+```bash
+git clone https://github.com/etjones/scad123d.git
+cd /content/scad123d
+uv sync
+uv run scad2step --help
+```
+
+Keep a **second** locked env for draftwright. Never `uv sync` both into one tree.
+
+Libraries the SCAD `include`s must live where OpenSCAD looks, e.g. BOSL2:
+
+```bash
+mkdir -p /root/.local/share/OpenSCAD/libraries
+git clone --depth 1 https://github.com/BelfrySCAD/BOSL2.git \
+  /root/.local/share/OpenSCAD/libraries/BOSL2
+```
+
+Avoid `%cd` into the scad123d clone for the rest of the notebook. Uploads and outputs should stay in a dedicated project dir (`/content/work`) and pass absolute paths into `uv run --directory /content/scad123d scad2step ...`.
+
 Then, conceptually:
 
 ```python
-# env A
-subprocess.check_call(["scad2step", "part.scad", "-o", "part.step"])
-# env B
-subprocess.check_call(["draftwright", "part.step", "--title", "Part", "--format", "pdf,svg"])
+# env A — locked scad123d
+subprocess.check_call([
+    "uv", "run", "--directory", "/content/scad123d",
+    "scad2step", "/content/work/part.scad", "-o", "/content/work/part.step",
+    "-D", "part=frame",
+])
+# env B — locked draftwright
+subprocess.check_call([
+    "uv", "run", "--directory", "/content/draftwright",
+    "draftwright", "/content/work/part.step",
+    "--title", "Frame", "--format", "pdf,svg",
+])
 ```
 
-Notebook UX: upload `.scad` → run one cell → download PDF/SVG (and keep the STEP).
+Notebook UX: upload `.scad` (+ libraries/zip) → smoke-test a cube → export selected parts via `-D part=` → download STEP + PDF/SVG.
+
+Colab runtimes are ephemeral. Setup cells must be rerun after reset; pin git SHAs or publish a lockfile in *this* repo so `uv sync` is reproducible.
 
 ---
 
@@ -172,6 +235,7 @@ It will **not**, without extra authoring:
 - Invent threads, fits, or GD&T that were never in the `.scad` (OpenSCAD has no PMI)
 - Stay clean if scad123d fell back to a mesh (fake edges everywhere)
 - Treat a multi-body colored assembly as a proper drawing set (both tools are part-oriented)
+- Recreate mates, gear ratios, or animation — that remains the Onshape assembly SOP, from separately exported components
 
 draftwright has a declarative `Sheet` API for tolerances, datums, and GD&T **if** you have live build123d objects. That path needs the version conflict solved (Python 3.13 single env, or skip STEP and pass objects). For Colab MVP, auto-from-STEP is the product.
 
@@ -179,26 +243,31 @@ draftwright has a declarative `Sheet` API for tolerances, datums, and GD&T **if*
 
 ## Risks
 
-1. **Mesh fallback → junk drawings.** Mitigate: surface scad123d warnings in the notebook; optionally refuse to dimension mesh-fallback parts and export views only.
-2. **OpenSCAD 2021.01 on Colab vs BOSL2 / newer language.** Mitigate: document AppImage install as an upgrade path.
-3. **RAM / time.** Free Colab ~12 GB. OpenCASCADE + OpenSCAD on a dense CSG can OOM. Timeouts already exist in scad2step.
-4. **Native wheel pain.** OCP wheels must match Python and manylinux. Colab is a normal Linux x86_64; this usually works, but it is the first thing to smoke-test.
-5. **Auto-dimension quality.** Heuristic. Always keep SVG/DXF so a human can fix the sheet.
-6. **AGPL surprise.** Document it up front so the repo does not look like a silent relicense.
+1. **Unlocked `uvx` / `pip` OCP mismatch.** Already hit in production as `OCP TopTools ImportError`. Mitigate: clone + `uv sync` + `uv run` only; never install CAD wheels into Colab's system Python.
+2. **Mesh fallback → junk drawings.** Mitigate: surface scad123d warnings; optionally refuse to dimension mesh-fallback parts and export views only. `hull()` of 3+ spheres and nested `offset_2d` are the SOP's known geometry cliffs.
+3. **Missing `include` libraries.** Mitigate: clone BOSL2 (and others) into `/root/.local/share/OpenSCAD/libraries`; fail the cell if `std.scad` is absent.
+4. **Fused assembly STEP.** A default SCAD `union()` of moving parts becomes one body. Fine for a static picture, useless for mates, balloons, or per-part drawings. Mitigate: require a `part=` selector (or separate files) and draw components one at a time.
+5. **OpenSCAD 2021.01 on Colab vs BOSL2 / newer language.** Mitigate: document AppImage install as an upgrade path.
+6. **RAM / time.** Free Colab ~12 GB. Full assemblies take substantially longer than parts. Smoke-test a cube, then one component, then production.
+7. **Native wheel pain.** OCP wheels must match Python and manylinux. The lockfile is the fix, not a newer unlocked resolve.
+8. **Auto-dimension quality.** Heuristic. Always keep SVG/DXF so a human can fix the sheet. Assembly drawings, balloons, and BOM stay in Onshape.
+9. **AGPL surprise.** Document it up front so the repo does not look like a silent relicense.
+10. **`-D` quoting.** Nested quotes around selector values break OpenSCAD. Use `-D part=frame`, not `-D part='"frame"'`.
 
 ---
 
 ## Recommended MVP (when building)
 
-1. Glue repo, not a fork merge.
-2. Two subprocesses, STEP on disk, Colab notebook + small CLI.
-3. Inputs: `.scad` (+ optional `-D` parameters and sibling `.json` Customizer).
+1. Glue repo, not a fork merge. Encode the proven SOP as notebook cells, then add a second locked env for draftwright.
+2. Two `uv` projects, STEP on disk, Colab notebook + small CLI. No `uvx`, no system-site OCP.
+3. Inputs: `.scad` (+ optional `-D part=` / other parameters, sibling `.json` Customizer, OpenSCAD libraries).
 4. Outputs: `.step`, `.pdf`, `.svg`, plus a log of scad123d mesh-fallback warnings.
-5. Samples: a cube+cylinder, a plate with holes, one BOSL2-ish part, one known mesh-fallback `hull()` of 3 spheres (to show the quality cliff).
-6. Skip FreeCAD / step2pdf for v1.
-7. License this repo MIT; depend on draftwright via CLI; mention AGPL in README.
+5. Smoke-test a `cube([10,20,30])` before any real model, same as the SOP.
+6. Samples: a cube+cylinder, a plate with holes, one BOSL2-ish part with a `part=` selector, one known mesh-fallback `hull()` of 3 spheres.
+7. Skip FreeCAD / step2pdf for v1. Skip Onshape automation; leave mates/motion/assembly drawings as the existing Onshape SOP.
+8. License this repo MIT; depend on draftwright via CLI; mention AGPL in README.
 
-Out of scope for v1: GD&T authoring, assemblies, DXF-into-SolidWorks roundtrip guarantees, a hosted SaaS.
+Out of scope for v1: GD&T authoring, Onshape API, mechanism mates, assembly balloons/BOM, a hosted SaaS.
 
 ---
 
@@ -211,3 +280,4 @@ Out of scope for v1: GD&T authoring, assemblies, DXF-into-SolidWorks roundtrip g
 - Colab runtime FAQ: Ubuntu 22.04 / Python 3.12.13
 - Ubuntu jammy `openscad` = 2021.01-4build1
 - OpenSCAD CSG/STL CLI does not need X; PNG does
+- Existing Colab SOP: *General OpenSCAD to STEP to Onshape SOP* (user-supplied). Locked `uv sync` of scad123d; BOSL2 in `/root/.local/share/OpenSCAD/libraries`; drawings and mates currently done in Onshape after STEP import.

@@ -8,7 +8,9 @@ This is **not** a fork-merge of two CAD codebases. The working design is:
 .scad  →  scad2step / scad123d  →  .step  →  draftwright  →  PDF / SVG / DXF
 ```
 
-**Feasibility: yes**, with isolated Python environments (the two PyPI stacks pin incompatible `build123d` versions on Colab's Python 3.12). Details, licenses, and the rejected FreeCAD path are in [FEASIBILITY.md](FEASIBILITY.md).
+**Feasibility: yes**, with isolated Python environments (the two PyPI stacks pin incompatible `build123d` versions on Colab's Python 3.12). Do not use `uvx`; clone each tool and `uv sync` its lockfile — an unlocked resolve already failed in Colab as `OCP TopTools ImportError`. Details are in [FEASIBILITY.md](FEASIBILITY.md).
+
+This would replace the *manual Onshape drawing* step for single parts. Onshape remains the place for mates, motion, and assembly drawings.
 
 | Stage | Project | License |
 |---|---|---|
