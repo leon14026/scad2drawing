@@ -209,7 +209,7 @@ Copy this notebook. **Edit only the CONFIG cell.** Then run all.
 
 `.scad` → locked `scad2step` → `.step` → locked `draftwright` → PDF/SVG.
 
-Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright`. If Gemini is driving this notebook, follow `GEMINI_COLAB_SOP.md`.
+Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright`. If Gemini is driving this notebook, follow `GEMINI_COLAB_SOP.md`, including the `CAPABILITY_INDEX` block (full command inventory: convert, worker, drawingmaster).
 
 CPU runtime. After a reset, run from the setup cells again (CONFIG is kept).""",
     ),
@@ -445,9 +445,250 @@ def write_nb(path: Path, cells: list) -> None:
     print("wrote", path)
 
 
+V2_TEMPLATE_OUT = ROOT / "notebooks" / "scad2drawing_v2.ipynb"
+
+V2_TEMPLATE_CELLS = [
+    cell(
+        MD,
+        """# scad2drawing Colab (V2)
+
+Copy this notebook. **Edit only the CONFIG cell.** Then Runtime → Run all.
+
+`.scad` → locked `scad2step` → `.step` → V2 worker (`import draftwright` **inside** the draftwright env) → PDF/SVG.
+
+**Gemini:** follow `GEMINI_COLAB_SOP_V2.md` (this notebook prints every Gemini SOP, including the `CAPABILITY_INDEX` block). DXF checks: `GEMINI_COLAB_SOP_DRAWINGMASTER.md`. Do **not** use `uvx`. Do **not** `pip install` scad123d / draftwright / build123d / cadquery-ocp into Colab’s kernel. Do **not** `import draftwright` here.
+
+CPU runtime. After a reset, rerun from setup (CONFIG is kept).
+
+Open-in-Colab (public repo): https://colab.research.google.com/github/leon14026/scad2drawing/blob/cursor/v2-draw-worker-a0df/notebooks/scad2drawing_v2.ipynb
+
+Private repo: File → Upload this `.ipynb` **and** `GEMINI_COLAB_SOP_V2.md`, or upload a zip of the glue checkout.""",
+    ),
+    cell(
+        MD,
+        """## CONFIG — edit this cell only
+
+| Field | Meaning |
+|---|---|
+| `MODEL_NAME` | `.scad` filename after upload |
+| `NEED_BOSL2` | `True` if the model `include <BOSL2/std.scad>` |
+| `PARTS` | Comma-separated `part=` values, or `""` for the whole file |
+| `TITLE` / `NUMBER` | Title block; use `{part}` in a batch |
+| `ON_MESH` | `warn` / `views-only` / `skip-draw` / `fail` |
+| `GLUE_REF` | Git branch/tag of this repo (`cursor/v2-draw-worker-a0df` until V2 is on main) |""",
+    ),
+    cell(
+        CODE,
+        r'''# >>> EDIT THIS CELL ONLY <<<
+MODEL_NAME = "YOUR_MODEL.scad"  # uploaded into /content/work
+NEED_BOSL2 = True
+TIMEOUT_S = 600
+FORMATS = "pdf,svg"
+ON_MESH = "warn"  # warn | views-only | skip-draw | fail
+
+# Comma-separated selector. "" = convert the whole file once.
+PARTS = "YOUR_PART"  # e.g. "drum_shaft,collar,coupler"
+TITLE = "{part}"
+NUMBER = "DWG-{part}"
+
+# Extra OpenSCAD -D flags on every job (not the selector). Bare values.
+DEFINES = [
+    # "holes=6",
+]
+
+# Glue checkout (V2 worker + SOP). Private repo: leave GLUE_REPO empty and upload a zip.
+GLUE_REPO = "https://github.com/leon14026/scad2drawing.git"
+GLUE_REF = "cursor/v2-draw-worker-a0df"
+# <<< END CONFIG <<<''',
+    ),
+    cell(
+        CODE,
+        r"""# Setup — OpenSCAD + paths (do not pip-install CAD wheels here)
+import os, shutil, subprocess, sys, zipfile
+from pathlib import Path
+
+WORK = Path("/content/work") if Path("/content").is_dir() else Path("work")
+ENV_ROOT = Path("/content/envs") if Path("/content").is_dir() else Path("envs")
+GLUE = Path("/content/scad2drawing") if Path("/content").is_dir() else Path(".")
+WORK.mkdir(parents=True, exist_ok=True)
+ENV_ROOT.mkdir(parents=True, exist_ok=True)
+
+def sh(cmd, **kw):
+    print("+", cmd if isinstance(cmd, str) else " ".join(map(str, cmd)))
+    subprocess.run(cmd, check=True, **kw)
+
+if shutil.which("openscad") is None:
+    sh("apt-get update -qq", shell=True)
+    sh("apt-get install -y -qq openscad", shell=True)
+sh(["openscad", "--version"])""",
+    ),
+    cell(
+        CODE,
+        r"""# Setup — uv only (the one allowed pip). Never uvx for CAD.
+if shutil.which("uv") is None:
+    sh([sys.executable, "-m", "pip", "install", "-q", "uv"])
+sh(["uv", "--version"])""",
+    ),
+    cell(
+        CODE,
+        r"""# Setup — glue repo (V2 CLI + worker + SOP). Never pip-install CAD here.
+if not (GLUE / "pyproject.toml").is_file() and GLUE_REPO:
+    sh(["git", "clone", "--depth", "1", "--branch", GLUE_REF, GLUE_REPO, str(GLUE)])
+if not (GLUE / "pyproject.toml").is_file():
+    zip_path = Path("/content/scad2drawing.zip") if Path("/content").is_dir() else Path("scad2drawing.zip")
+    assert zip_path.is_file() or (Path.cwd() / "pyproject.toml").is_file(), (
+        "Clone failed (private repo?). Upload scad2drawing.zip or run this notebook inside the checkout."
+    )
+    if zip_path.is_file() and not (GLUE / "pyproject.toml").is_file():
+        sh(["unzip", "-o", str(zip_path), "-d", str(GLUE.parent)])
+glue_root = GLUE if (GLUE / "pyproject.toml").is_file() else Path.cwd()
+sh([sys.executable, "-m", "pip", "install", "-q", "-e", str(glue_root)])
+sh(["scad2drawing", "--version"])
+print("glue", glue_root)""",
+    ),
+    cell(
+        CODE,
+        r"""# Show every Gemini SOP (each contains the same CAPABILITY_INDEX block)
+names = (
+    "GEMINI_CAPACITY_INDEX.txt",
+    "GEMINI_COLAB_SOP_V2.md",
+    "GEMINI_COLAB_SOP.md",
+    "GEMINI_COLAB_SOP_DRAWINGMASTER.md",
+)
+missing = [n for n in names if not (glue_root / n).is_file()]
+assert not missing, "upload or clone these: " + ", ".join(missing)
+try:
+    from IPython.display import Markdown, display
+except Exception:
+    display = None
+for name in names:
+    path = glue_root / name
+    print("SOP", path)
+    body = path.read_text()
+    if display:
+        display(Markdown("```text\n" + body + "\n```" if name.endswith(".txt") else body))
+    else:
+        print(body)""",
+    ),
+    cell(
+        CODE,
+        r"""# Setup — BOSL2 if CONFIG asked for it
+BOSL = Path("/root/.local/share/OpenSCAD/libraries/BOSL2")
+if NEED_BOSL2:
+    if not (BOSL / "std.scad").is_file():
+        BOSL.parent.mkdir(parents=True, exist_ok=True)
+        sh(["git", "clone", "--depth", "1",
+            "https://github.com/BelfrySCAD/BOSL2.git", str(BOSL)])
+    assert (BOSL / "std.scad").is_file(), "BOSL2 std.scad missing"
+    print("BOSL2 ok")
+else:
+    print("BOSL2 skipped")""",
+    ),
+    cell(
+        CODE,
+        r"""# Setup — locked scad123d + draftwright via glue bootstrap. Never uvx.
+sh(["scad2drawing", "bootstrap", "--root", str(ENV_ROOT)])
+os.environ["SCAD2DRAWING_SCAD_ENV"] = str(ENV_ROOT / "scad123d")
+os.environ["SCAD2DRAWING_DRAW_ENV"] = str(ENV_ROOT / "draftwright")
+print("envs ready")""",
+    ),
+    cell(
+        CODE,
+        r"""# Smoke cube via V2 convert — if this fails, stop; the environment is broken
+cube = glue_root / "samples" / "cube.scad"
+assert cube.is_file(), cube
+sh(["scad2drawing", "convert", str(cube), "-o", str(WORK / "smoke"),
+    "--title", "Smoke cube", "--number", "SMOKE-001", "--timeout", "120",
+    "--formats", FORMATS, "--on-mesh", "warn"])
+print("smoke ok")""",
+    ),
+    cell(
+        CODE,
+        r"""# Upload YOUR_MODEL.scad (and zip/libraries) into /content/work — not into the clones
+try:
+    from google.colab import files
+    print("Select", MODEL_NAME, "and any includes/zip")
+    uploaded = files.upload()
+    for name, data in uploaded.items():
+        target = WORK / Path(name).name
+        target.write_bytes(data)
+        print("saved", target)
+        if target.suffix.lower() == ".zip":
+            with zipfile.ZipFile(target) as zf:
+                zf.extractall(WORK)
+            print("unzipped into", WORK)
+except ImportError:
+    print("Not Colab — put", MODEL_NAME, "in", WORK)
+
+model = WORK / MODEL_NAME
+if not model.is_file():
+    matches = list(WORK.rglob(MODEL_NAME))
+    if matches:
+        model = matches[0]
+print("model", model, "exists" if model.is_file() else "MISSING")
+assert model.is_file(), f"Upload {MODEL_NAME} first" """,
+    ),
+    cell(
+        CODE,
+        r"""# Convert with V2 CLI (worker + --parts + lint). Never uvx; never kernel import draftwright.
+out = WORK / "out"
+cmd = [
+    "scad2drawing", "convert", str(model), "-o", str(out),
+    "--title", TITLE, "--number", NUMBER, "--formats", FORMATS,
+    "--on-mesh", ON_MESH, "--timeout", str(TIMEOUT_S),
+]
+if PARTS.strip():
+    cmd.extend(["--parts", PARTS.strip()])
+for d in DEFINES:
+    if "=" not in d:
+        raise ValueError(f"-D expects name=value, got {d!r}")
+    if d.split("=", 1)[1].strip()[:1] in "'\"":
+        raise ValueError(f"bare -D values only, not {d!r}")
+    cmd.extend(["-D", d])
+sh(cmd)
+for p in sorted(out.glob("*")):
+    print(p.name, p.stat().st_size)""",
+    ),
+    cell(
+        CODE,
+        r"""# Download STEP/PDF/SVG/logs/JSON
+payload = [p for p in (WORK / "out").iterdir() if p.is_file()]
+bundle = WORK / "drawings.zip"
+with zipfile.ZipFile(bundle, "w") as zf:
+    for p in payload:
+        zf.write(p, p.name)
+        print(p.name, p.stat().st_size)
+try:
+    from google.colab import files as colab_files
+    colab_files.download(str(bundle))
+except ImportError:
+    print("zip at", bundle)""",
+    ),
+    cell(
+        MD,
+        """## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `openscad: command not found` | Runtime reset; rerun from setup |
+| `scad2drawing` 0.1.x / missing worker | `GLUE_REF` must be the V2 branch; `pip install -e` the glue checkout |
+| `Cannot open include file` | `NEED_BOSL2 = True` or clone into `/root/.local/share/OpenSCAD/libraries` |
+| `OCP TopTools ImportError` | You used `uvx` or system pip. Use bootstrap only |
+| Parse error after `-D` | Bare `part=frame` — no nested quotes |
+| `needs-attention` | Drawing exists; edit the SVG. Not shop-release |
+| Every sheet `DWG-001` | Set `NUMBER = "DWG-{part}"` and `PARTS` |
+| `MODEL MISSING` | Upload; filename must match `MODEL_NAME` |
+
+Onshape still owns mates, motion, and assembly balloons. SOP: `GEMINI_COLAB_SOP_V2.md`.
+""",
+    ),
+]
+
+
 def main() -> None:
     write_nb(OUT, CELLS)
     write_nb(TEMPLATE_OUT, TEMPLATE_CELLS)
+    write_nb(V2_TEMPLATE_OUT, V2_TEMPLATE_CELLS)
 
 
 if __name__ == "__main__":

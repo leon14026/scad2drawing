@@ -1,19 +1,21 @@
-# Gemini in Colab SOP — scad2drawing V1
+# Gemini in Colab SOP — scad2drawing V2
 
-Use this file as the **instruction pack** if you drive the conversion with Gemini in Google Colab (the Gemini side panel, “Help me code”, or paste into a Gemini chat that writes notebook cells).
+Use this file as the **instruction pack** in Google Colab (Gemini side panel, “Help me code”, or a chat that writes cells).
 
-**How to use it**
+**Easiest path**
 
-1. Open a Colab notebook (CPU runtime; GPU unused).
-2. Upload this file, or paste the **Hard rules** plus **Cell sequence** into Gemini.
-3. Tell Gemini: *Follow GEMINI_COLAB_SOP.md exactly. Do not invent a shorter install.*
-4. After a runtime reset, start again at Cell 1.
+1. CPU runtime (GPU unused).
+2. Open `notebooks/scad2drawing_v2.ipynb` (File → Upload if the GitHub repo is private).
+3. Upload **this file** into Colab too, or clone the glue repo so it lands at `/content/scad2drawing/GEMINI_COLAB_SOP_V2.md`.
+4. Tell Gemini: *Follow GEMINI_COLAB_SOP_V2.md exactly. Do not invent a shorter install.*
+5. Edit only the **CONFIG** cell. Runtime → Run all.
+6. After a runtime reset, start again at Cell 1.
 
-Preferred path: open `notebooks/scad2drawing_template.ipynb`, fill the **CONFIG** cell, and only ask Gemini to **fill CONFIG and run cells**, not to rewrite setup.
+Preferred: fill CONFIG and run cells. Do not let Gemini rewrite setup.
 
-**V2:** use [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) and `notebooks/scad2drawing_v2.ipynb` instead of this file.
+V1 SOP (raw `uv run draftwright` CLI): `GEMINI_COLAB_SOP.md`. This V2 file is the one to use now.
 
-Checker: [GEMINI_COLAB_SOP_DRAWINGMASTER.md](GEMINI_COLAB_SOP_DRAWINGMASTER.md).
+DXF check: [GEMINI_COLAB_SOP_DRAWINGMASTER.md](GEMINI_COLAB_SOP_DRAWINGMASTER.md).
 
 ## CAPABILITY_INDEX
 
@@ -80,36 +82,45 @@ smoke_before_user_model=samples/cube.scad cube([10,20,30])
 ## Paste into Gemini (system)
 
 ```text
-You are setting up and running scad2drawing in Google Colab.
+You are setting up and running scad2drawing V2 in Google Colab.
 
-Obey the CAPABILITY_INDEX block in this file. It lists every command (convert, worker, drawingmaster). This V1 file is the raw CLI path. Prefer GEMINI_COLAB_SOP_V2.md unless the user asked for --draw cli.
+Obey the CAPABILITY_INDEX block in this file before you invent a command.
+It is the full inventory: bootstrap, convert flags, worker, lint, drawingmaster.
 
-Goal: .scad → STEP → dimensioned PDF/SVG.
+Goal: .scad → STEP → dimensioned PDF/SVG, with unique drawing numbers,
+SVG kept, and draftwright lint (needs-attention) printed.
+If the user supplies an ASCII DXF, also run drawingmaster (see GEMINI_COLAB_SOP_DRAWINGMASTER.md). Do not approve the part.
 
-You MUST use two locked uv environments and subprocess CLIs:
-  /content/envs/scad123d   →  uv run --directory … scad2step
-  /content/envs/draftwright →  uv run --directory … draftwright
-Work files live in /content/work. Never %cd into the git clones.
+You MUST:
+- Clone or upload the scad2drawing glue repo, then pip install -e that repo
+  (stdlib glue only — not CAD wheels into Colab's system Python).
+- Two locked uv environments via: scad2drawing bootstrap --root /content/envs
+    /content/envs/scad123d     →  scad2step
+    /content/envs/draftwright  →  V2 worker (import draftwright in THAT env only)
+- Work files in /content/work. Never %cd into the git clones.
+- Convert with the glue CLI, default --draw worker:
+    scad2drawing convert MODEL.scad -o /content/work/out \
+      --parts a,b --title "{part}" --number "DWG-{part}" --on-mesh warn
+- Set SCAD2DRAWING_SCAD_ENV / SCAD2DRAWING_DRAW_ENV or pass --scad-env/--draw-env.
 
 FORBIDDEN:
 - uvx scad2step, uvx draftwright, uvx anything CAD
 - pip install scad123d / draftwright / build123d / cadquery-ocp into Colab's system Python
 - import scad123d or import draftwright in the notebook kernel
-- mixing both tools in one venv
+  (the worker may import draftwright only as uv run --directory DRAW_ENV python …/v2_draw_worker.py)
+- mixing both CAD tools in one venv
 - nested quotes on -D (no part='"frame"'; use part=frame)
-- copying or vendoring draftwright/scad123d source into a new cell as a rewrite
+- copying draftwright/scad123d source into a cell
 - FreeCAD, step2pdf, or Onshape API
 
-If setup already exists (openscad on PATH, both envs have pyproject.toml), skip clone/sync.
+If setup already exists (openscad on PATH, both envs have pyproject.toml,
+scad2drawing --version prints 0.2.x), skip clone/sync.
 If OpenSCAD is missing, apt-get install -y openscad.
 If uv is missing, python -m pip install uv — that is the only pip CAD-adjacent install allowed.
-Pins:
-  scad123d  https://github.com/etjones/scad123d.git  @ 85811a1a9daa291fb9ebfdfd8339322a9ec5b52c
-  draftwright https://github.com/pzfreo/draftwright.git @ v0.4.35
-Always: git clone --depth 1, git fetch --depth 1 origin REV, git checkout FETCH_HEAD, uv sync --directory ENV.
-Smoke a cube([10, 20, 30]) before the user's model.
-Surface mesh-fallback warnings. Do not hide them.
-Onshape mates/motion are out of scope. One STEP → one drawing. Use -D part=NAME per component.
+Smoke samples/cube.scad (or a cube([10,20,30])) before the user's model.
+Surface mesh-fallback and lint needs-attention. Do not hide them.
+Onshape mates/motion are out of scope. One STEP → one drawing. Use --parts a,b
+(or -D part=NAME) per component, never a fused union() as the only sheet.
 ```
 
 ---
@@ -118,14 +129,15 @@ Onshape mates/motion are out of scope. One STEP → one drawing. Use -D part=NAM
 
 | Do | Do not |
 |---|---|
-| `uv sync --directory /content/envs/scad123d` | `uvx scad2step` (causes `OCP TopTools ImportError`) |
-| `uv run --directory ENV tool …` | `pip install build123d` in the Colab kernel |
-| Absolute paths under `/content/work` | `%cd /content/envs/scad123d` then `files.upload()` |
-| `-D part=frame` | `-D part='"frame"'` |
-| Smoke cube first | Jump straight to a huge assembly |
-| Export components separately for motion/drawings | Draw a fused `union()` assembly as if it were one part |
+| `pip install -e /content/scad2drawing` (glue only) | `pip install draftwright` in the kernel |
+| `scad2drawing bootstrap --root /content/envs` | `uvx scad2step` (`OCP TopTools ImportError`) |
+| `scad2drawing convert … --parts a,b --title "{part}"` | Kernel `import draftwright` |
+| `--on-mesh views-only` when scad123d mesh-fallbacks | Hide mesh warnings |
+| Keep default `--formats pdf,svg` | PDF-only if the user wanted to edit dims |
+| Absolute paths under `/content/work` | `%cd` into env clones then `files.upload()` |
+| Bare `-D part=frame` | `-D part='"frame"'` |
 
-draftwright is AGPL-3.0. Call it via `scad2drawing convert` or `uv run --directory DRAW_ENV …`. Do not paste its source into the notebook. Do not `import draftwright` in the Colab kernel. V2’s worker import is allowed **only** as that subprocess (`--draw worker`, the CLI default).
+draftwright is AGPL-3.0. V2 may `import draftwright` **only** inside the locked draw env via `scripts/v2_draw_worker.py`. `--draw cli` is the V1 official CLI if the user asks.
 
 ---
 
@@ -134,27 +146,26 @@ draftwright is AGPL-3.0. Call it via `scad2drawing convert` or `uv run --directo
 | Placeholder | Replace with |
 |---|---|
 | `YOUR_MODEL.scad` | Uploaded source filename |
-| `YOUR_PART` | Selector value (`frame`, `shaft`, …) or omit `-D` if none |
-| `YOUR_TITLE` | Title block text |
-| `DWG-001` | Drawing number |
-| `PARAMETER` / `VALUE` | Extra OpenSCAD `-D` overrides |
+| `a,b,c` | `--parts` selector values (`drum_shaft,collar,…`) or empty for the whole file |
+| `{part}` | Title/number substitution in batch |
+| `warn` | `--on-mesh`: `warn` / `views-only` / `skip-draw` / `fail` |
+| `PARAMETER=VALUE` | Extra OpenSCAD `-D` (repeatable) |
 
 ---
 
 ## Cell sequence
 
-Run in order. Separate code cells. After a Colab reset, rerun 1–5.
+Run in order. Separate code cells. After a Colab reset, rerun 1–6.
 
-### Cell 1 — OpenSCAD
+### Cell 1 — OpenSCAD + paths
 
 ```python
-import os, shutil, subprocess, sys
+import os, shutil, subprocess, sys, zipfile
 from pathlib import Path
 
 WORK = Path("/content/work")
 ENV_ROOT = Path("/content/envs")
-SCAD_ENV = ENV_ROOT / "scad123d"
-DRAW_ENV = ENV_ROOT / "draftwright"
+GLUE = Path("/content/scad2drawing")
 WORK.mkdir(parents=True, exist_ok=True)
 ENV_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -168,7 +179,7 @@ if shutil.which("openscad") is None:
 sh(["openscad", "--version"])
 ```
 
-PNG preview needs Xvfb. **CSG/STEP conversion does not.** Do not install a display unless the user asked for a PNG from OpenSCAD.
+PNG preview needs Xvfb. **CSG/STEP conversion does not.**
 
 ### Cell 2 — uv
 
@@ -178,7 +189,43 @@ if shutil.which("uv") is None:
 sh(["uv", "--version"])
 ```
 
-### Cell 3 — BOSL2 only if the model `include`s it
+### Cell 3 — glue repo (V2 worker lives here)
+
+Public repo:
+
+```python
+GLUE_REPO = "https://github.com/leon14026/scad2drawing.git"
+GLUE_REF = "cursor/v2-draw-worker-a0df"  # use main after V2 is merged
+
+if not (GLUE / "pyproject.toml").is_file():
+    sh(["git", "clone", "--depth", "1", "--branch", GLUE_REF, GLUE_REPO, str(GLUE)])
+sh([sys.executable, "-m", "pip", "install", "-q", "-e", str(GLUE)])
+sh(["scad2drawing", "--version"])  # expect 0.2.x
+print("SOP", GLUE / "GEMINI_COLAB_SOP_V2.md")
+```
+
+Private repo: upload a zip of the checkout, then:
+
+```python
+# sh(["unzip", "-o", "/content/scad2drawing.zip", "-d", "/content"])
+# GLUE = Path("/content/scad2drawing")  # adjust if the zip has a prefix folder
+```
+
+Do **not** skip this cell. `scripts/v2_draw_worker.py` is resolved from the glue checkout.
+
+### Cell 4 — show this SOP (so Gemini can read it in-notebook)
+
+```python
+sop = GLUE / "GEMINI_COLAB_SOP_V2.md"
+assert sop.is_file(), "Upload GEMINI_COLAB_SOP_V2.md or clone the glue repo"
+try:
+    from IPython.display import Markdown, display
+    display(Markdown(sop.read_text()))
+except Exception:
+    print(sop.read_text())
+```
+
+### Cell 5 — BOSL2 only if the model `include`s it
 
 ```python
 BOSL = Path("/root/.local/share/OpenSCAD/libraries/BOSL2")
@@ -189,57 +236,29 @@ if not (BOSL / "std.scad").is_file():
 assert (BOSL / "std.scad").is_file()
 ```
 
-Other libraries: clone into `/root/.local/share/OpenSCAD/libraries/<NameExpectedByInclude>`.
+Skip if `NEED_BOSL2` is false.
 
-### Cell 4 — locked scad123d
-
-```python
-SCAD123D_REPO = "https://github.com/etjones/scad123d.git"
-SCAD123D_REV = "85811a1a9daa291fb9ebfdfd8339322a9ec5b52c"
-
-def materialize(repo, dest: Path, rev: str):
-    if not (dest / ".git").exists():
-        if dest.exists():
-            shutil.rmtree(dest)
-        sh(["git", "clone", "--depth", "1", repo, str(dest)])
-    sh(["git", "-C", str(dest), "fetch", "--depth", "1", "origin", rev])
-    sh(["git", "-C", str(dest), "checkout", "--quiet", "FETCH_HEAD"])
-    sh(["uv", "sync", "--directory", str(dest)])
-
-materialize(SCAD123D_REPO, SCAD_ENV, SCAD123D_REV)
-sh(["uv", "run", "--directory", str(SCAD_ENV), "scad2step", "--help"],
-   stdout=subprocess.DEVNULL)
-```
-
-Continue only if `scad2step --help` exits 0.
-
-### Cell 5 — locked draftwright
+### Cell 6 — bootstrap locked CAD envs
 
 ```python
-DRAW_REPO = "https://github.com/pzfreo/draftwright.git"
-DRAW_REV = "v0.4.35"
-materialize(DRAW_REPO, DRAW_ENV, DRAW_REV)
-sh(["uv", "run", "--directory", str(DRAW_ENV), "draftwright", "--help"],
-   stdout=subprocess.DEVNULL)
+sh(["scad2drawing", "bootstrap", "--root", str(ENV_ROOT)])
+os.environ["SCAD2DRAWING_SCAD_ENV"] = str(ENV_ROOT / "scad123d")
+os.environ["SCAD2DRAWING_DRAW_ENV"] = str(ENV_ROOT / "draftwright")
 ```
 
-First-run `uv sync` takes several minutes (OpenCASCADE wheels). Do not “simplify” to pip.
+First-run `uv sync` takes several minutes. Do not “simplify” to pip.
 
-### Cell 6 — smoke cube
+### Cell 7 — smoke cube
 
 ```python
-smoke = WORK / "cube.scad"
-smoke.write_text("cube([10, 20, 30]);\n")
-step = WORK / "cube.step"
-sh(["uv", "run", "--directory", str(SCAD_ENV), "scad2step",
-    str(smoke), "-o", str(step), "--timeout", "120"])
-assert step.stat().st_size > 0
-print(step, step.stat().st_size)
+sh(["scad2drawing", "convert", str(GLUE / "samples" / "cube.scad"),
+    "-o", str(WORK / "smoke"), "--title", "Smoke cube", "--number", "SMOKE-001",
+    "--timeout", "120"])
 ```
 
-If this fails, **stop**. Do not blame the user's model. Fix OpenSCAD / the scad123d env.
+If this fails, **stop**. Do not blame the user's model.
 
-### Cell 7 — upload
+### Cell 8 — upload model
 
 ```python
 from google.colab import files
@@ -247,50 +266,36 @@ uploaded = files.upload()
 for name, data in uploaded.items():
     (WORK / Path(name).name).write_bytes(data)
     print("saved", WORK / Path(name).name)
-# zip:  !unzip -o /content/work/YOUR_PROJECT.zip -d /content/work/YOUR_PROJECT
 ```
 
-### Cell 8 — convert selected part
+### Cell 9 — convert (V2 CLI)
 
 ```python
 MODEL = WORK / "YOUR_MODEL.scad"
-DEFINES = ["part=YOUR_PART"]   # or []
-OUT_STEM = "YOUR_PART"
-
-step_path = WORK / f"{OUT_STEM}.step"
-cmd = ["uv", "run", "--directory", str(SCAD_ENV), "scad2step",
-       str(MODEL), "-o", str(step_path), "--timeout", "600"]
-for d in DEFINES:
-    cmd += ["-D", d]
-proc = subprocess.run(cmd, text=True, capture_output=True)
-sys.stderr.write(proc.stderr)
-if proc.returncode:
-    raise SystemExit(proc.returncode)
-(WORK / f"{OUT_STEM}.scad2step.log").write_text(proc.stderr)
-if "mesh" in proc.stderr.lower() and "fallback" in proc.stderr.lower():
-    print("WARNING: mesh fallback — inspect STEP; dimensions may be junk")
-print(step_path, step_path.stat().st_size)
-```
-
-Extra overrides: `DEFINES = ["part=frame", "PARAMETER=VALUE"]`.
-
-### Cell 9 — drawing
-
-```python
-prefix = WORK / OUT_STEM
-sh(["uv", "run", "--directory", str(DRAW_ENV), "draftwright",
-    str(step_path), "--out", str(prefix),
-    "--format", "pdf,svg", "--title", "YOUR_TITLE", "--number", "DWG-001"])
-for p in sorted(WORK.glob(OUT_STEM + ".*")):
+cmd = [
+    "scad2drawing", "convert", str(MODEL),
+    "-o", str(WORK / "out"),
+    "--parts", "a,b",                 # or omit for the whole file
+    "--title", "{part}",
+    "--number", "DWG-{part}",
+    "--on-mesh", "warn",              # warn | views-only | skip-draw | fail
+    "--formats", "pdf,svg",
+    "--timeout", "600",
+    # "-D", "holes=6",
+]
+sh(cmd)
+for p in sorted((WORK / "out").glob("*")):
     print(p.name, p.stat().st_size)
 ```
+
+Already have STEPs? Put them in `/content/work/out/` with the expected stem (`model_part.step`) and add `--skip-step`.
 
 ### Cell 10 — download
 
 ```python
 from google.colab import files as colab_files
 bundle = WORK / "drawings.zip"
-payload = [p for p in WORK.glob(OUT_STEM + ".*") if p.suffix != ".scad"]
+payload = [p for p in (WORK / "out").iterdir() if p.is_file()]
 sh(["zip", "-j", str(bundle), *map(str, payload)])
 colab_files.download(str(bundle))
 ```
@@ -302,13 +307,18 @@ colab_files.download(str(bundle))
 | Symptom | Response |
 |---|---|
 | `openscad: command not found` | Runtime was reset. Rerun Cell 1. |
-| `Cannot open include file` | Clone that library next to BOSL2; do not rewrite the SCAD to drop the include unless the user asks. |
-| `OCP` / `TopTools` / `HashCode` import error | You used `uvx` or system pip. Delete that approach. Use Cells 4–5 only. |
+| `scad2drawing: command not found` or version `0.1.x` | Cell 3: clone V2 branch + `pip install -e` the glue. |
+| `missing V2 worker` | Glue checkout incomplete. Clone/unzip the full repo, not only the `.ipynb`. |
+| `Cannot open include file` | Clone that library next to BOSL2; do not drop the include unless the user asks. |
+| `OCP` / `TopTools` / `HashCode` | You used `uvx` or system pip. Delete that approach. Use bootstrap only. |
 | OpenSCAD parse error after `-D` | Bare `part=frame`. |
-| Cube works, real model fails | Geometry/library issue, not env. Export one module via `-D part=`. |
-| `hull() has no BRep equivalent` | Expected mesh fallback. Warn the user; still write STEP. |
-| One fused body | Expected for `part=assembly`. Draw `frame` / `shaft` separately. |
-| User asks to `import draftwright` in the kernel | Refuse. Use `scad2drawing convert` (`--draw worker` runs the import inside `DRAW_ENV` only). |
+| Cube works, real model fails | Geometry/library issue. Use `--parts` for one module. |
+| `hull() has no BRep equivalent` | Expected mesh fallback. Warn; use `--on-mesh views-only` if auto-dims are junk. |
+| `lint … status=needs-attention` | Drawing still written. Tell the user to edit the SVG (missing notch/D-flat/gear data). Do not claim shop-release. |
+| Every sheet is `DWG-001` | You ran one convert per file without `--number DWG-{part}` / `--parts`. |
+| User asks to `import draftwright` in the kernel | Refuse. `scad2drawing convert --draw worker` only. |
+| User hands you a DXF | `drawingmaster check FILE.dxf --profile asme-ca`. Obey CAPABILITY_INDEX. Exit 1 is a finding, not a crash. Do not approve the part. |
+| `no_semantic_dimensions` | Draftwright DXF is exploded. Do not invent DIMENSION entities. Use `.draftwright.json` for lint. |
 
 ---
 
@@ -317,29 +327,20 @@ colab_files.download(str(bundle))
 - Onshape mates, gear relations, motion, balloons, BOM
 - Shop-release GD&T that was never in the `.scad`
 - FreeCAD TechDraw / step2pdf
-- Restarting the Colab runtime after installing CAD packages into system site-packages
+- Mixing scad123d and draftwright in the Colab kernel
+- Restarting the runtime after installing CAD packages into system site-packages
 
 ---
 
 ## Quality checklist
 
-- [ ] `openscad --version` prints 2021.x (or newer AppImage if you installed one)
-- [ ] `uv run --directory /content/envs/scad123d scad2step --help` works
-- [ ] `uv run --directory /content/envs/draftwright draftwright --help` works
-- [ ] Smoke cube STEP is nonzero
-- [ ] Production STEP is nonzero
-- [ ] Mesh-fallback notes copied to the user if present
-- [ ] PDF/SVG downloaded
+- [ ] `scad2drawing --version` is 0.2.x
+- [ ] `GEMINI_COLAB_SOP_V2.md` is readable in the notebook (Cell 4)
+- [ ] `openscad --version` prints 2021.x (or newer AppImage)
+- [ ] Bootstrap envs have `pyproject.toml`
+- [ ] Smoke cube PDF/SVG nonzero
+- [ ] Production convert used `--parts` and `{part}` if the model has a selector
+- [ ] Mesh-fallback and `needs-attention` lines copied to the user if present
+- [ ] PDF **and** SVG downloaded
 - [ ] No `uvx`, no kernel `import draftwright`
-
----
-
-## V2 addendum
-
-Superseded by [GEMINI_COLAB_SOP_V2.md](GEMINI_COLAB_SOP_V2.md) and `notebooks/scad2drawing_v2.ipynb`. If you stay on this V1 file by mistake, still allowed:
-
-```text
-scad2drawing convert /content/work/MODEL.scad -o /content/work/out --parts frame,shaft --title "{part}"
-```
-
-Still forbidden: `import draftwright` in a notebook cell.
+- [ ] CAPABILITY_INDEX block was left intact (do not summarize it away)

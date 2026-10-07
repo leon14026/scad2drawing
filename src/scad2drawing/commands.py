@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -121,12 +122,116 @@ def uv_sync_cmd(env: Path) -> list[str]:
     return ["uv", "sync", "--directory", str(env)]
 
 
+def parse_parts(raw: str | None) -> list[str]:
+    """Comma-separated ``--parts frame,shaft`` list. Empty → []."""
+    if not raw:
+        return []
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if any("=" in p or " " in p for p in parts):
+        raise DefineError(f"--parts expects comma-separated names, got {raw!r}")
+    return parts
+
+
+def defines_for_part(base: list[str], part: str | None) -> list[str]:
+    """Replace or add ``part=`` while keeping other -D flags."""
+    rest = [d for d in base if not d.startswith("part=")]
+    if part:
+        rest.append(f"part={part}")
+    return rest
+
+
+def draw_worker_cmd(
+    env: Path,
+    worker: Path,
+    step: Path,
+    out_prefix: Path,
+    *,
+    title: str | None = None,
+    number: str = "DWG-001",
+    formats: str = "pdf,svg",
+    auto_dims: bool = True,
+    mesh_fallback: bool = False,
+) -> list[str]:
+    cmd = [
+        "uv",
+        "run",
+        "--directory",
+        str(env),
+        "python",
+        str(worker),
+        "--step",
+        str(step),
+        "--out",
+        str(out_prefix),
+        "--format",
+        formats,
+        "--number",
+        number,
+    ]
+    if title:
+        cmd.extend(["--title", title])
+    if auto_dims:
+        cmd.append("--auto-dims")
+    else:
+        cmd.append("--no-auto-dims")
+    if mesh_fallback:
+        cmd.append("--mesh-fallback")
+    return cmd
+
+
+def worker_script() -> Path:
+    from scad2drawing.pins import ROOT
+
+    return ROOT / "scripts" / "v2_draw_worker.py"
+
+
 def mesh_fallback_lines(stderr: str) -> list[str]:
     hits = []
     for line in stderr.splitlines():
         if any(h.lower() in line.lower() for h in MESH_HINTS):
             hits.append(line.strip())
     return hits
+
+
+def summarize_drawing_report(path: Path) -> dict | None:
+    """Read a draftwright JSON sidecar. No CAD imports.
+
+    Returns None if the file is missing or not JSON. ``attention`` is true when
+    the report status is ``needs-attention`` (same string draftwright uses).
+    """
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    lint = data.get("lint") if isinstance(data.get("lint"), dict) else {}
+    assessment = lint.get("assessment") if isinstance(lint.get("assessment"), dict) else {}
+    status = str(data.get("status") or assessment.get("status") or "").strip()
+    errors = int(lint.get("errors") or 0)
+    warnings = int(lint.get("warnings") or 0)
+    issues: list[tuple[str, str, str]] = []
+    raw_issues = lint.get("issues") if isinstance(lint.get("issues"), list) else []
+    for issue in raw_issues:
+        if not isinstance(issue, dict):
+            continue
+        sev = str(issue.get("severity") or "")
+        if sev not in {"error", "warning"}:
+            continue
+        issues.append(
+            (sev, str(issue.get("code") or ""), str(issue.get("message") or ""))
+        )
+    attention = status == "needs-attention"
+    return {
+        "status": status or "unknown",
+        "errors": errors,
+        "warnings": warnings,
+        "summary": str(assessment.get("summary") or ""),
+        "attention": attention,
+        "issues": issues,
+    }
 
 
 def default_env_root() -> Path:

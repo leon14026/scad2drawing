@@ -269,6 +269,8 @@ draftwright has a declarative `Sheet` API for tolerances, datums, and GD&T **if*
 
 Out of scope for v1: GD&T authoring, Onshape API, mechanism mates, assembly balloons/BOM, a hosted SaaS.
 
+V2 (shipped in this repo, see [docs/V2.md](docs/V2.md)): still two envs and STEP on disk. Drawing may `import draftwright` **only** inside the locked draftwright env via `scripts/v2_draw_worker.py`. Batch `--parts` and `--on-mesh` fail-soft. Do not mix CAD stacks in the Colab kernel.
+
 ---
 
 ## Sources checked (2026-10-07)

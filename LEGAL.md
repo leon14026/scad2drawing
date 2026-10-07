@@ -13,13 +13,15 @@ Original MIT-licensed wrapper + Colab notebook + samples. At runtime the user in
 | OpenSCAD | GPL-2.0+ | system binary |
 | BOSL2 (optional) | BSD-2-Clause | OpenSCAD library folder |
 
-We do **not** vendor those sources, rebrand them, or import draftwright as a Python library.
+We do **not** vendor those sources or rebrand them. The `scad2drawing` package never imports CAD libraries.
+
+**V2 worker:** `scripts/v2_draw_worker.py` is launched with `uv run --directory <draftwright clone> python …` and may `from draftwright import build_drawing` in that process only. That is not an import into Colab’s kernel or into this package. `--draw cli` keeps the V1 official-CLI-only path. If you modify draftwright or host a modified drawing service, AGPL obligations are yours.
 
 ## Realistic risks
 
 **DMCA / copyright strike — low if we keep it glue.** Strikes happen when someone uploads another project’s source (or substantial copied code) without a license. Cloning GitHub repos the user already has a right to clone, or `uv sync` of a public lockfile, is how those projects expect to be used. Do not paste draftwright or scad123d source into this tree.
 
-**AGPL — the one to treat carefully.** Calling the official `draftwright` CLI is the conservative approach (same idea as calling `ffmpeg`). Importing `draftwright` into our package, forking it, or shipping a modified drawing *service* is when copyleft and AGPL §13 (network use of a modified version) get real. Keep V1 as subprocesses. If you later host a public converter that *modifies* draftwright, you owe users corresponding source.
+**AGPL — the one to treat carefully.** Calling the official `draftwright` CLI (`--draw cli`) is the conservative approach (same idea as calling `ffmpeg`). V2’s worker still runs as a **subprocess of the locked draftwright env**, not as a library import into this MIT package. Importing `draftwright` into `scad2drawing` itself, forking it, or shipping a modified drawing *service* is when copyleft and AGPL §13 get real. If you later host a public converter that *modifies* draftwright, you owe users corresponding source.
 
 **Trademarks.** OpenSCAD, Onshape, Google Colab, GitHub are other people’s marks. Use them descriptively (“runs in Google Colab”), not as if this project is affiliated.
 

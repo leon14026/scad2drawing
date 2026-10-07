@@ -18,10 +18,11 @@ scad123d / scad2step
 draftwright
   https://github.com/pzfreo/draftwright
   License: GNU Affero General Public License v3.0
-  Used as: `uv run draftwright`
-  The drawing engine is AGPL-3.0. This wrapper calls the official CLI; it does
-  not copy, modify, or relicense draftwright. If you modify draftwright or
-  expose a modified copy as a network service, AGPL obligations are yours.
+  Used as: `uv run draftwright` (V1) or `uv run python scripts/v2_draw_worker.py`
+  inside the draftwright environment (V2). The worker may import draftwright
+  in that process only. This wrapper does not copy, modify, or relicense
+  draftwright. If you modify draftwright or expose a modified copy as a
+  network service, AGPL obligations are yours.
 
 build123d
   https://github.com/gumyr/build123d
